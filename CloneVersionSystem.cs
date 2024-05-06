@@ -9,24 +9,40 @@ public class CloneVersionSystem : ICloneVersionSystem
     public string Execute(string query)
 	{
         string command = query[..4];
+        string key;
+        CloneSubject tempClone;
+
         switch (command)
         {
             case "lear":
                 int index = query.LastIndexOf(" ");
-                string key = query[6..index];
+                key = query[6..index];
                 string prog = query[(index + 1)..];
-                CloneSubject temp = cloneSubjects[key];
-                temp.Learn(prog);
-                cloneSubjects[key] = temp;
+                tempClone = cloneSubjects[key];
+                tempClone.Learn(int.Parse(prog));
+                cloneSubjects[key] = tempClone;
                 break;
             case "roll":
+                key = query[9..];
+                tempClone= cloneSubjects[key];
+                tempClone.Rollback();
+                cloneSubjects[key] = tempClone;
                 break;
             case "rele":
+                key = query[8..];
+                tempClone = cloneSubjects[key];
+                tempClone.Relearn();
+                cloneSubjects[key] = tempClone;
                 break;
             case "clon":
+                key = query[6..];
+                CloneSubject newClone = cloneSubjects[key].Clone(cloneSubjects[key].Knowledges, cloneSubjects[key].History);
+                cloneSubjects.Add((cloneSubjects.Count + 1).ToString(), newClone);
                 break;
-            case "check":
-                break;
+            case "chec":
+                key = query[6..];
+                string knowledge = cloneSubjects[key].Check();
+                return knowledge;
             default: return null;
         }
 
@@ -36,12 +52,12 @@ public class CloneVersionSystem : ICloneVersionSystem
 
 public class CloneSubject
 {
-    public LinkedStack<string> Knowledges = new();
-    public LinkedStack<string> History = new();
+    public LinkedStack<int> Knowledges = new();
+    public LinkedStack<int> History = new();
     public CloneSubject()
     {
     }
-    public void Learn (string prog)
+    public void Learn (int prog)
     {
         Knowledges.Push(prog);
         History.Clear();
@@ -49,21 +65,19 @@ public class CloneSubject
     
     public void Rollback() 
     { 
-        string prog = Knowledges.Pop();
+        int prog = Knowledges.Pop();
         History.Push(prog);
     }
     public void Relearn () 
     {
-        string prog = History.Pop();
+        int prog = History.Pop();
         Knowledges.Push(prog);
     }
-    static public CloneSubject Clone(LinkedStack<string> knowledges, LinkedStack<string> history)
+    public CloneSubject Clone(LinkedStack<int> knowledges, LinkedStack<int> history)
     {
-        CloneSubject clone = new()
-        {
-            Knowledges = knowledges,
-            History = history
-        };
+        CloneSubject clone = new();
+        clone.Knowledges = knowledges.Copy();
+        clone.History = history.Copy();
         return clone;
     }
 
@@ -75,7 +89,7 @@ public class CloneSubject
         }
         else
         {
-            return Knowledges.Pop();
+            return Knowledges.Peek().ToString();
         }
     }
 }
@@ -102,5 +116,18 @@ public class LinkedStack<T>
         return item;
     }
 
+    public T Peek()
+    {
+        if (stack.Count == 0) throw new InvalidCastException();
+        T item = stack.Last.Value;
+        return item;
+    }
+
+    public LinkedStack<T> Copy()
+    {
+        LinkedStack<T> copy = new();
+        copy.stack = new LinkedList<T>(this.stack);
+        return copy;
+    }
     public void Clear() => stack.Clear();
 }
